@@ -1,7 +1,17 @@
-sim_jab = function(junc, padding = 3e4, seed = NULL) {
-
-    ## browser()
+sim_jab = function(junc, padding = 3e4, seed = NULL, verbose = FALSE) {
     
+
+    junc = endoapply(sortSeqlevels(junc), function(gr) sort(gr, ignore.strand = TRUE))
+    grl_junc = grl.unlist(junc)
+    remove_idx = unique(gr2dt(grl_junc)[! seqnames %in% c(1:24, "X", "Y")]$grl.ix)
+
+
+
+    if (length(remove_idx) > 0) {
+        junc = junc[-remove_idx]
+    }
+    
+    ## browser()
     kag = karyograph(junc)
 
     tile =  karyograph(junc)$tile
@@ -24,7 +34,10 @@ sim_jab = function(junc, padding = 3e4, seed = NULL) {
     sort_u_junc = sort(u_junc, ignore.strand = T)
     sort_u_junc$idx = 1:length(u_junc)
 
-    segged = dropSeqlevels(pos_tile, setdiff(seqlevelsInUse(pos_tile), seqlevelsInUse(sort_u_junc)))
+    ## segged = dropSeqlevels(pos_tile, setdiff(seqlevelsInUse(pos_tile), seqlevelsInUse(sort_u_junc)))
+    ## segged = pos_tile %Q% (seqnames %in% c(1:22, "X", "Y"))
+    segged = gr_keep_seq(pos_tile, as.character(c(1:22, "X", "Y")))
+    ## segged = keepSeqlevels(pos_tile, c(1:22, "X", "Y"))
     seqlevels(segged) = seqlevels(segged)[orderSeqlevels(seqlevels(segged), TRUE)]
     segged = sort(segged)
     segged$id = seg_int = 1:length(segged)
@@ -40,17 +53,24 @@ sim_jab = function(junc, padding = 3e4, seed = NULL) {
     tel_seg =  unlist(lapply(ref_int_contigs, function(x) c(head(x,1), tail(x, 1))), use.names = F)
     rev_contigs  = lapply(contigs_lst, function(x) -rev(x))
 
-    seg_idx = nearest(sort_u_junc, segged, ignore.strand = T)
-    names(seg_idx) = as.character(strand(sort_u_junc))
+    ## seg_idx = nearest(sort_u_junc, segged, ignore.strand = T) ## problem line
+    ## names(seg_idx) = as.character(strand(sort_u_junc))
 
-    sort_u_junc$seg_idx = seg_idx
+    map = map_junc2seg(sort_u_junc, segged)
+    ## seg_idx = as.integer(names(segged)[map$subjectHits])
+    ## names(seg_idx) = as.character(strand(sort_u_junc[map$queryHits]))
+    values(sort_u_junc)[map$queryHits,"seg_idx"] = as.integer(names(segged)[map$subjectHits])
+
+    ## sort_u_junc$seg_idx = seg_idx
 
     dt_junc = gr2dt(sort_u_junc[,c("grl.ix", "grl.iix", "seg_idx")])
     connections = dt_junc[,list(seqnames, seg_idx, strand), by = grl.ix]
+    connections[, strand_val := ifelse(strand == "-", 1, 2)]
 
     lst = split(connections, connections$grl.ix)
     bint_lst = lapply(lst, function(x) {
-        tmp = x[,seg_idx] * (as.numeric(x[,strand])*2-3)
+        ## tmp = x[,seg_idx] * (as.numeric(x[,strand])*2-3) ## if options(stringsAsFactors = TRUE), this works, but it's not robust
+        tmp = x[,seg_idx] * (x[,strand_val]*2-3)
         names(tmp) = as.character(x[,strand])
         return(tmp)
     })
@@ -95,12 +115,19 @@ sim_jab = function(junc, padding = 3e4, seed = NULL) {
     
     if (!"Y" %in% seqlevelsInUse(sort_u_junc)) {
         if (rbinom(1, 1, prob = 0.5)) {
+            chosen_sex = "female"
+        ## if (1 == 0) {
             tmp_seg_2 = unlist(tmp_seg_1); names(tmp_seg_2) = paste0(rep("lo", length(tmp_seg_2)), "_", tmp_seg_2); tmp_seg_2 = list(X = tmp_seg_2)
+            ## return(chosen_sex)
         } else {
+            chosen_sex = "male"
             tmp_seg_2 = contigs_lst$Y; names(tmp_seg_2) = paste0(rep("lo", length(tmp_seg_2)), "_", tmp_seg_2); tmp_seg_2 = list(Y = tmp_seg_2)
+            ## return(chosen_sex)
         }
     } else {
+        chosen_sex = "male"
         tmp_seg_2 = contigs_lst$Y; names(tmp_seg_2) = paste0(rep("lo", length(tmp_seg_2)), '_', tmp_seg_2); tmp_seg_2 = list(Y = tmp_seg_2)
+        ## return(chosen_sex)
     }
     
     sex_chrom = c(tmp_seg_1, tmp_seg_2)
@@ -121,12 +148,16 @@ sim_jab = function(junc, padding = 3e4, seed = NULL) {
     }
 
     for (i in 1:length(junc)) {
-        message("commencing iteration: ", i)
 
+        if (verbose) message("commencing iteration: ", i)
+
+        ## browser(expr = (i == 205))
+        ## browser(expr = (i == 38))
         
         rand_id = ifelse(length(junc_pool)>1, sample(c(junc_pool), 1), junc_pool)
-        sample_junc = bint_lst[[rand_id]]
-        junc_match = ifelse(sample_junc>0, sample_junc+1, sample_junc)
+        ## sample_junc = bint_lst[[rand_id]]
+        ## junc_match = ifelse(sample_junc>0, sample_junc+1, sample_junc)
+        junc_match = bint_lst[[rand_id]]
         junction_grl = junc[[rand_id]]
 
 
@@ -135,6 +166,8 @@ sim_jab = function(junc, padding = 3e4, seed = NULL) {
 
         ## new searching using GRanges to get window of contigs!!!
         ## this is to start the search for contigs
+
+        ###### performance block 1
 
         agg = rbind(copy(current_contigs)[, pool := "current"], copy(hold_out)[, pool := "hold_out"]); agg = agg[elementNROWS(agg$contigs_lst) > 0,]; agg[, n := as.character(1:.N)]; agg[, c('loose_left', 'loose_right') := list(unlist(loose_left), unlist(loose_right))]
 
@@ -183,7 +216,7 @@ sim_jab = function(junc, padding = 3e4, seed = NULL) {
         
 
         tmp_match = tmp_match[order(.ix, seqnames, start, end)] ## order by reference distance with respect to every contig (hence .ix first in ordering)
-
+        
 
 
         ## get reference distances of adjacent segments in contigs 
@@ -200,17 +233,22 @@ sim_jab = function(junc, padding = 3e4, seed = NULL) {
 
         gr_match = dt2gr(tmp_match)
 
+
         
         ## now get match within a certain window for ra1
-        ## browser(expr = (i == 93))
-        
+
+
         all_matches = matching_algo2(gr_match, junction_grl, junc_match, padding = padding)
         ## browser(expr = (i >= 198))
         
+        
         ## browser(expr = (any(as.character(seqnames(junction_grl)) == "X") & i >= 200))
+
+
         
         match_lst1 = select_match(all_matches, 1, junc_match)
         match_lst2 = select_match(all_matches, 2, junc_match)
+        
 
         is_on_same_contig = match_lst1$final_match$.ix == match_lst2$final_match$.ix
 
@@ -230,12 +268,14 @@ sim_jab = function(junc, padding = 3e4, seed = NULL) {
         in_hold_out = ra1$in_hold_out | ra2$in_hold_out
 
 
-
         ## need to adjust the indices of the matches
         ## only matters if the matches are on the same contig
         
         ## adjust ra1 by ra2 indices
         if (is_on_same_contig) {
+            
+
+            
             tmp_ra = list(copy(ra1$single_ra), copy(ra2$single_ra))
             tmp_contig = combined_contigs[[1]][ra1$adjusted_indices]
 
@@ -283,8 +323,11 @@ sim_jab = function(junc, padding = 3e4, seed = NULL) {
 
             ra1$single_ra = tmp_ra[[1]]
             ra2$single_ra = tmp_ra[[2]]
+            
         }
-        
+
+
+
         ra_table = rbind(ra1[["single_ra"]], ra2[["single_ra"]])
             
             
@@ -342,16 +385,14 @@ sim_jab = function(junc, padding = 3e4, seed = NULL) {
         ## ra_contig = data.table(contigs_lst = list(link_fused(f_side1, fused1, f_side2, fused2)), contig_nm = paste0('junc_', rand_id), contig_idx = current_contigs[,max(contig_idx) + 1])
 
         new_nm = ra_table[,list(list(unique(unlist(contig_nm))))][,V1]
-
-
-
+        
 
 
         if (identical(ra_table$contig_idx[[1]], ra_table$contig_idx[[2]]) &
             identical(ra_table$contigs_lst[[1]], ra_table$contigs_lst[[2]]) &
             (! all(ra_table$cont_match == 1) & ! all(ra_table$cont_match == ra_table$contigs_len))) { ## this last one is for if matches happen on exact same contig at ends... BFB!
 
-            
+
 
             contig = ra_table$contigs_lst[[1]]
 
@@ -371,16 +412,23 @@ sim_jab = function(junc, padding = 3e4, seed = NULL) {
             unfused_on_same_contig = list(resected_segs$unfused)
 
             new_contigs_lst = list(resected_segs$ra_contig)
+
             
         } else {
+
+
+            
             f_side1 = ra_table[1,f_side]
             f_side2 = ra_table[2,f_side]
             
             fused1 = ra_table[1,fused[[1]]]
             fused2 = ra_table[2,fused[[1]]]
             new_contigs_lst = list(link_fused(f_side1, fused1, f_side2, fused2))
+
         }
 
+
+        
         ra_contig = data.table(contigs_lst = new_contigs_lst,
                                contig_nm = new_nm,
                                contig_idx = current_contigs[,max(contig_idx) + 1],
@@ -407,13 +455,16 @@ sim_jab = function(junc, padding = 3e4, seed = NULL) {
 
         not_to_throw_out = ra_contig$contigs_lst[[1]]
         
-        if (ra_table[,identical(contigs_lst[[1]],contigs_lst[[2]])]) {
+        if (identical(ra_table$contig_idx[[1]], ra_table$contig_idx[[2]]) &
+            identical(ra_table$contigs_lst[[1]], ra_table$contigs_lst[[2]]) &
+            (! all(ra_table$cont_match == 1) & ! all(ra_table$cont_match == ra_table$contigs_len))) {
+        ## if (ra_table[,identical(contigs_lst[[1]],contigs_lst[[2]])]) {
             updated_hold_out = rbind(updated_hold_out, ra_table[,list(contigs_lst = unfused_on_same_contig, contig_nm = contig_nm[1], contig_idx = contig_idx[1], iter_idx = list(sort(c(unlist(iter_idx[1]), i))))][,c("loose_left", "loose_right") := list(sapply(contigs_lst, function(x) !((head(x, 1)) %in% left_tel)), sapply(contigs_lst, function(x) !((tail(x, 1)) %in% right_tel)))])
         } else {
             updated_hold_out = rbind(updated_hold_out, ra_table[,list(contigs_lst = unfused, contig_nm, contig_idx, iter_idx = lapply(iter_idx, function(y) sort(c(y,i))), loose_left = sapply(unfused, function(x) !((head(x, 1)) %in% left_tel)), loose_right = sapply(unfused, function(x) !((tail(x, 1)) %in% right_tel)))])
         }
 
-
+        
 
         ## contigs in hold_out need marked as having a rearrangement on them which sticks even after further perturbations
 
@@ -436,10 +487,11 @@ sim_jab = function(junc, padding = 3e4, seed = NULL) {
 
 
 
-
-
-        message("completed iteration ", i, "\n")
+        if (verbose) message("completed iteration ", i, "\n")
     }
-    
+    iteration_list = data.table::setattr(iteration_list, "sex", chosen_sex)
+    iteration_list = data.table::setattr(iteration_list, "tile", tile)
     return(iteration_list)
 }
+
+
