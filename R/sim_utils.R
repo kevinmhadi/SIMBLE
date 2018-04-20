@@ -144,10 +144,20 @@ junc_join = function(c_parts, ord_junc_match, ord_seg_match) {
 
 
 
+wrap_char = function(s, width = 60, trimends = TRUE)
+{
+    pat = sprintf('(.{1,%s})(\\s|$)', width)
+    ## gsub('(.{1,90})(\\s|$)', '\\1\n', s)
+    return(switch(as.character(trimends),
+                  "FALSE" = gsub('(.{1,90})', '\\1\n', s),
+                  "TRUE" = trimws(gsub('(.{1,90})', '\\1\n', s))
+                  ))
+}
 
             
         
-write.fasta = function(grl, genome, path, append = T, compress = F, overwrite = FALSE) {
+write.fasta = function(grl, genome, path, append = T, compress = FALSE, overwrite = FALSE)
+{
     if (file.exists(path) & !overwrite) {
         stop("file already exists... \n remove file first manually or set overwrite = TRUE")
     } else if (file.exists(path) & overwrite) {
@@ -158,27 +168,35 @@ write.fasta = function(grl, genome, path, append = T, compress = F, overwrite = 
     }
     message("Total number of contigs: ", length(grl))
     message("Total number of bases: ", sum(as.numeric(width(grl.unlist(grl)))))
+    ## zz = file(path, open = "wt")
     for (i in 1:length(grl)) {
         message("Writing grl[[i]] where i=", i, " to FASTA")
+        ## these_seqs = gr2seq(grl[[i]], genome)
+        ## char_seqs = wrap_char(as.character(these_seqs))
+        ## rnm = names(grl[i])
+        ## message("Length of contig: ", width(biostr))
+        message("Length of contig: ", sum(as.numeric((width(grl[[i]])))))
+        ## write(paste0(">", rnm), zz, append = TRUE)
+        ## write(char_seqs, zz, append = TRUE)
         biostr = DNAStringSet(do.call(xscat, gr2seq(grl[[i]], genome)))
         names(biostr) = names(grl[i])
-        message("Length of contig: ", width(biostr))
-        ## writeXStringSet(biostr, path, append = append, compress = compress, format = 'fasta', width = 60)
-        message("Chromosome/Contig ", seqnames(grl[[i]]), " with Allele ", grl[[i]]$allele, ", named ", names(grl[i]), " written to FASTA.")
+        writeXStringSet(biostr, path, append = append, compress = compress, format = 'fasta', width = 60)
+        message("Chromosome/Contigs ", unique(seqnames(grl[[i]])), " with Alleles ", unique(grl[[i]]$allele), ", named ", names(grl[i]), " written to FASTA.")
     }
+    ## close(zz)
     message("Finished!")
     message("FASTA written to: ", path)
 }
 
     
-## NA12878 = read_vcf("~/DB/Platinum_Genomes/NA12878.vcf.gz")
-## NA12877 = read_vcf("~/DB/Platinum_Genomes/NA12877.vcf.gz")
+NA12878 = read_vcf("~/DB/Platinum_Genomes/NA12878.vcf.gz")
+NA12877 = read_vcf("~/DB/Platinum_Genomes/NA12877.vcf.gz")
 
-## NA12877 = renameSeqlevels(NA12877, sub("^chr", "", seqlevels(NA12877)))
-## NA12878 = renameSeqlevels(NA12878, sub("^chr", "", seqlevels(NA12878)))
+NA12877 = renameSeqlevels(NA12877, sub("^chr", "", seqlevels(NA12877)))
+NA12878 = renameSeqlevels(NA12878, sub("^chr", "", seqlevels(NA12878)))
 
-## alt_hi = CharacterList(NA12878$ALT)
-## alt_lo = CharacterList(NA12877$ALT)
+alt_hi = CharacterList(NA12878$ALT)
+alt_lo = CharacterList(NA12877$ALT)
 
 ## ## hi_var = DNAStringSetList(mclapply(NA12878$ALT, function(x) x[1], mc.cores = 10)) ## Slow as HELL
 
@@ -192,40 +210,40 @@ write.fasta = function(grl, genome, path, append = T, compress = F, overwrite = 
 ## sub("^([A-Z]*)(\\,)([A-Z]*)", "\\3", this)
 
 
-## alt_hi_split = unstrsplit(alt_hi, sep = ",")
-## alt_lo_split = unstrsplit(alt_lo, sep = ",") 
+alt_hi_split = unstrsplit(alt_hi, sep = ",")
+alt_lo_split = unstrsplit(alt_lo, sep = ",") 
 
-## ## for 1st haplotype
-## alt_hi_1 = sub("^([A-Z]*)(\\,)([A-Z]*)", "\\1", alt_hi_split)
-## alt_lo_1 = sub("^([A-Z]*)(\\,)([A-Z]*)", "\\1", alt_lo_split)
+## for 1st haplotype
+alt_hi_1 = sub("^([A-Z]*)(\\,)([A-Z]*)", "\\1", alt_hi_split)
+alt_lo_1 = sub("^([A-Z]*)(\\,)([A-Z]*)", "\\1", alt_lo_split)
 
-## ## for 2nd haplotype
-## alt_hi_2 = sub("^([A-Z]*)(\\,)([A-Z]*)", "\\3", alt_hi_split)
-## alt_lo_2 = sub("^([A-Z]*)(\\,)([A-Z]*)", "\\3", alt_lo_split)
+## for 2nd haplotype
+alt_hi_2 = sub("^([A-Z]*)(\\,)([A-Z]*)", "\\3", alt_hi_split)
+alt_lo_2 = sub("^([A-Z]*)(\\,)([A-Z]*)", "\\3", alt_lo_split)
 
 
 
 gr2seq = function(gr, genome) {
 
-    NA12878 = read_vcf("~/DB/Platinum_Genomes/NA12878.vcf.gz")
-    NA12877 = read_vcf("~/DB/Platinum_Genomes/NA12877.vcf.gz")
+    ## NA12878 = read_vcf("~/DB/Platinum_Genomes/NA12878.vcf.gz")
+    ## NA12877 = read_vcf("~/DB/Platinum_Genomes/NA12877.vcf.gz")
 
-    NA12877 = renameSeqlevels(NA12877, sub("^chr", "", seqlevels(NA12877)))
-    NA12878 = renameSeqlevels(NA12878, sub("^chr", "", seqlevels(NA12878)))
+    ## NA12877 = renameSeqlevels(NA12877, sub("^chr", "", seqlevels(NA12877)))
+    ## NA12878 = renameSeqlevels(NA12878, sub("^chr", "", seqlevels(NA12878)))
 
-    alt_hi = CharacterList(NA12878$ALT)
-    alt_lo = CharacterList(NA12877$ALT)
+    ## alt_hi = CharacterList(NA12878$ALT)
+    ## alt_lo = CharacterList(NA12877$ALT)
 
-    alt_hi_split = unstrsplit(alt_hi, sep = ",")
-    alt_lo_split = unstrsplit(alt_lo, sep = ",") 
+    ## alt_hi_split = unstrsplit(alt_hi, sep = ",")
+    ## alt_lo_split = unstrsplit(alt_lo, sep = ",") 
 
-    ## for 1st haplotype
-    alt_hi_1 = sub("^([A-Z]*)(\\,)([A-Z]*)", "\\1", alt_hi_split)
-    alt_lo_1 = sub("^([A-Z]*)(\\,)([A-Z]*)", "\\1", alt_lo_split)
+    ## ## for 1st haplotype
+    ## alt_hi_1 = sub("^([A-Z]*)(\\,)([A-Z]*)", "\\1", alt_hi_split)
+    ## alt_lo_1 = sub("^([A-Z]*)(\\,)([A-Z]*)", "\\1", alt_lo_split)
 
-    ## for 2nd haplotype
-    alt_hi_2 = sub("^([A-Z]*)(\\,)([A-Z]*)", "\\3", alt_hi_split)
-    alt_lo_2 = sub("^([A-Z]*)(\\,)([A-Z]*)", "\\3", alt_lo_split)
+    ## ## for 2nd haplotype
+    ## alt_hi_2 = sub("^([A-Z]*)(\\,)([A-Z]*)", "\\3", alt_hi_split)
+    ## alt_lo_2 = sub("^([A-Z]*)(\\,)([A-Z]*)", "\\3", alt_lo_split)
 
 
     hi_ix = which(gr$allele == "hi")
@@ -321,8 +339,8 @@ gr2seq = function(gr, genome) {
     all_RList = IRangesList(conc(hi_RList, lo_RList))
     all_VList = CharacterList(conc(hi_VList, lo_VList))
 
-    ## var_seq = replaceAt(this_seq, hi_RList, hi_VList)
-    ## var_seq = replaceAt(this_seq, lo_RList, lo_VList)
+    ## var_seq = replaceAt(this_seq, hi_RList, hi_VList) 
+    ## var_seq = replaceAt(this_seq, lo_RList, lo_VList) # var_seq gets overwritten!!!
 
     var_seq = replaceAt(this_seq, all_RList, all_VList)
     ## may need to do another apply function with c() to concatenate all the rangeslists and variantlists to do replaceAt() in one step
@@ -444,7 +462,7 @@ grab_all_contigs = function(sim_object, step) {
 make_final_contigs = function(sim_object, clean_up_loose_ends = TRUE) {
     ## final_simulation_output = sim_object[[length(sim_object)]]
     
-    ## cont = final_simulation_output$output_contigs
+    ## cont = final_simulation_output$output_contigses = 
     ## ho = final_simulation_output$output_hold_out
     ## ho = ho[sapply(ho$contigs_lst, function(x) length(x)>0)]
     ## ho[,loose_left := unlist(loose_left)]
@@ -454,11 +472,9 @@ make_final_contigs = function(sim_object, clean_up_loose_ends = TRUE) {
     ## both_loose = ho[,loose_left+loose_right == 2]
 
     ## agg = rbind(cont, ho)
-    ## browser()
 
-
-
-
+    junction_grl = GRangesList(lapply(sim_object, function(x) x$junction_grl[[1]]))
+    tile = karyograph(junctions = junction_grl)$tile
 
     if (clean_up_loose_ends) {
         junction_grl = GRangesList(lapply(sim_object, function(x) x$junction_grl[[1]]))
@@ -471,6 +487,7 @@ make_final_contigs = function(sim_object, clean_up_loose_ends = TRUE) {
 
 
     keep_lg = agg[,(loose_left + loose_right == 0) |  unlapply(agg$contigs_lst, function(x) any(diff(x) !=1))]
+
 
     ## keep_lg = agg[,unlapply(agg$contigs_lst, function(x) any(diff(x) !=1))]
     keep = agg[keep_lg,]
@@ -488,6 +505,9 @@ make_final_contigs = function(sim_object, clean_up_loose_ends = TRUE) {
     tmp_tel_2 = unlist(lapply(ref_cont$contigs_lst, function(x) tail(x,1)), use.names = F)
     left_tel = c(tmp_tel_1, -tmp_tel_2)
     right_tel = c(-tmp_tel_1, tmp_tel_2)
+
+    ## assign new contig_idx so that there are no NAs
+    keep[, contig_idx := 1:.N]
     
     left_fill = keep[, list(lapply(contigs_lst, function(x) {
         if (loose_left) {
@@ -501,10 +521,9 @@ make_final_contigs = function(sim_object, clean_up_loose_ends = TRUE) {
               }
               chr_idx = which(!is.na(idx))
               this_match = na.omit(idx)
-              ## browser()
               return(s[[chr_idx]][1:(this_match-1)])}})),
         by = contig_idx]
-    ## browser()
+
 
     right_fill = keep[, list(lapply(contigs_lst, function(x) {
         ## print(x)
@@ -522,11 +541,12 @@ make_final_contigs = function(sim_object, clean_up_loose_ends = TRUE) {
               return(s[[chr_idx]][(this_match+1): length(s[[chr_idx]])])}})),
         by = contig_idx]
 
+
     final_cont = mapply(function(left,mid,right) {
         c(left, mid, right) },
         left_fill$V1, keep$contigs_lst, right_fill$V1)
 
-    tl =  karyograph(junc)$tile
+    tl =  karyograph(junction_grl)$tile
     seqlevels(tl) = seqlevels(tl)[orderSeqlevels(seqlevels(tl), TRUE)]
     tl = sort(tl)
     pos_tile = tl %Q% (strand == "+")
@@ -534,6 +554,7 @@ make_final_contigs = function(sim_object, clean_up_loose_ends = TRUE) {
     names(new_tl) = c(1:length(pos_tile), -(1:length(pos_tile)))
     strand(new_tl[(length(new_tl)/2+1):length(new_tl)]) = "-"
     tl = new_tl
+
 
     grl = GRangesList(lapply(final_cont, function(cont) {
         allele = ifelse(grepl("hi", names(cont)), "hi", "lo")
@@ -562,15 +583,17 @@ get_true_tile_cn = function(grl) {
     pos_true_cn = setNames(true_cn, as.character(1:length(true_cn))); strand(pos_true_cn) = "+"; 
     neg_true_cn = setNames(true_cn, as.character((length(true_cn)+1):(2*length(true_cn)))); strand(neg_true_cn) = "-"
     true_tile = c(pos_true_cn, neg_true_cn)
+    return(true_tile)
 }
 
 
 ## test with last_chance contigs and g_junc (incorporated snowman junctions)
-true_edges = function(final_contigs, grl_junctions, check_sort = TRUE) {
+true_edges = function(final_contigs, grl_junctions, check_sort = TRUE, mc.cores = 1) {
     ## browser()
 
     if (check_sort) {
         final_contigs = sortSeqlevels(final_contigs)
+        grl_junctions = endoapply(sortSeqlevels(grl_junctions), function(gr) sort(gr, ignore.strand = TRUE))
         grl_junctions = sort(sortSeqlevels(grl_junctions))
     }
     
@@ -663,7 +686,7 @@ true_edges = function(final_contigs, grl_junctions, check_sort = TRUE) {
     pos_ref = split(pos_ref, seqnames(pos_ref))
     neg_ref = split(neg_ref, seqnames(neg_ref))
 
-    ref_edges = rbindlist(lapply(c(pos_ref, neg_ref), function(tile) {
+    ref_edges = rbindlist(mclapply(c(pos_ref, neg_ref), function(tile) {
         ## browser()
         if (length(tile) > 1) {
             tl = names(tile)
@@ -678,7 +701,7 @@ true_edges = function(final_contigs, grl_junctions, check_sort = TRUE) {
             ## browser()
             return(NULL)
         }
-    }))
+    }, mc.cores = mc.cores, mc.preschedule = TRUE))
 
     es = ref_edges[, list(from, to, cn = ref_edges_2nd, type = "reference")]
     es = rbindlist(list(es, edge_copy[, list(from, to, cn, type = "aberrant")]))
@@ -774,7 +797,7 @@ plot_contigs = function(single_iteration_list, tile, filename = NULL, windows = 
     
 
 
-    col_contigs = endoapply(grl2, function(gr) {
+            col_contigs = endoapply(grl2, function(gr) {
         values(gr)[,"col"] = ifelse(values(gr)[, "allele"] == "hi",
                                     alpha("red", 0.1),
                                     alpha("blue", 0.1))
@@ -952,7 +975,7 @@ plot_all_contigs = function(iteration_list, directory = NULL, windows = NULL, mc
         directory = paste0(directory, "/")
         system(paste('mkdir -p', directory))
     }
-    width = ceiling(log10(abs(length(new_sim))))
+    width = ceiling(log10(abs(length(iteration_list))))
     mclapply(1:length(iteration_list), function(i) {
         filename = paste0(directory, formatC(i, width = width, flag = 0), "_", "junc_", iteration_list[[i]]$junc_idx, ".", format)
         suppressWarnings(plot_contigs(iteration_list[[i]], tile = tile, filename = filename, windows = windows, id_contigs = id_contigs, format = format))
@@ -1390,8 +1413,10 @@ matching_algo2 = function(gr_match, ## matches contig within window
     }
     
     
-    eligible1 = closest1 %&% boundary
-    eligible2 = closest2 %&% boundary
+    eligible1 = gUtils::"%&%"(closest1, boundary)
+    eligible2 = gUtils::"%&%"(closest2, boundary)
+    ## eligible1 = closest1 %&% boundary
+    ## eligible2 = closest2 %&% boundary
 
     return(list(j1_matches = eligible1, j2_matches = eligible2))
 
@@ -1528,4 +1553,534 @@ select_match = function(possible_matches, which_junc, junc_match) {
                 where_to_fill = where_to_fill,
                 where_to_trim = where_to_trim))
 
+}
+
+
+get_matches = function(gr_match,
+                       junction_grl,
+                       junc_match,
+                       which_breakpoint_ix,
+                       padding = 3e4)
+{
+    ## browser()
+    this_id = which_breakpoint_ix
+    junction_reference_face = ifelse(junc_match[which_breakpoint_ix] < 0, "left", "right")
+    junc_match_field = paste0("junc_match", this_id)
+    junc_contig_face_field = paste0("junc_contig_face", this_id)
+    this_junc = junction_grl[this_id]
+    this_junc_match = junc_match[this_id]
+    ## junc_match < 0 means on REFERENCE, junction is left facing, 
+    ## this is so any match does not have its reference "end" (right side if oriented on reference)
+    ## beyond the window of query (30kb for now?)
+    this_win = padding
+    if (this_win > 1e9) {
+        this_win = pmin(this_win, 1e9)
+    }
+    junction_window = (this_junc+this_win)
+    if (junction_reference_face == "left") {
+        ## no_further = end(gr_match) <= end(junction_window)
+        no_further = end(gr_match) <= end(this_junc)
+    } else {
+        ## no_further = start(gr_match) >= start(junction_window)
+        no_further = start(gr_match) >= start(this_junc)
+    }
+    
+    possible_matches = gr_match[gr_match %^% junction_window & no_further]
+    values(possible_matches)[, "junc_match_idx"] = which_breakpoint_ix
+
+
+    
+
+    ## grabbing only matches that are loose reference facing to the right or that actually match to junction
+    if (junc_match[this_id] < 0)  {## if junction is left facing ON REFERENCE
+        
+        possible_matches = possible_matches %Q% (na2false(loose_left_reference_face == "right") |
+                                                 na2false(loose_right_reference_face == "right") |
+                                                 !is.na(eval((parse(text = junc_match_field)))))
+        ## possible_matches = na2false(gv(possible_matches, "loose_left_reference_face")) |
+        ##     na2false(gv(possible_matches, "loose_left_reference_face")) |
+        ##     !is.na(gv(possible_matches, junc_match_field))
+        
+    } else if (junc_match[this_id] > 0) {
+        possible_matches = possible_matches %Q% (na2false(loose_left_reference_face == "left") |
+                                                 na2false(loose_right_reference_face == "left") |
+                                                 !is.na(eval((parse(text = junc_match_field)))))
+    }
+    
+
+    ## values(possible_matches)[, junc_match_field] = na.omit(gv(possible_matches,junc_match_field ))
+    values(possible_matches)[, junc_match_field] = this_junc_match
+
+    ## junction contig face also follows same sign convention as if the junction actually matches to the contig
+    values(possible_matches)[, junc_contig_face_field] = ifelse(sign(gv(possible_matches, junc_match_field)) == sign(possible_matches$seg_id), "right", "left")
+    
+
+    ## now how to select?
+    ## if there is loose end, always grab that one?
+    ## or do selection based on # segs and/or contig distance?
+
+    ## collecting stats for possible matches
+
+    contig_side_to_fuse = ifelse(sign(gv(possible_matches, "seg_id")) == sign(gv(possible_matches, junc_match_field)),
+                                 "right",
+                                 "left")
+    
+    values(possible_matches)[, "contig_side_to_fuse"] = contig_side_to_fuse
+
+    num_exact_matches = length(which(abs(possible_matches$seg_id) == abs(gv(possible_matches, junc_match_field))))
+
+    ## will_fuse_loose = !is.na(possible_matches$loose_right_reference_face) | !is.na(possible_matches$loose_left_reference_face)
+    if (this_junc_match < 0) {
+        will_fuse_loose = na2false(possible_matches$loose_right_reference_face == "right" & this_junc_match < 0 | possible_matches$loose_left_reference_face == "right" & this_junc_match < 0)
+    } else if (this_junc_match > 0) {
+        will_fuse_loose = na2false(possible_matches$loose_right_reference_face == "left" & this_junc_match > 0 | possible_matches$loose_left_reference_face == "left" & this_junc_match > 0)
+    }
+    
+    
+    possible_matches$will_fuse_loose = will_fuse_loose
+    number_of_segments_to_be_fused = ifelse(gv(possible_matches, junc_contig_face_field) == "left",
+                                            possible_matches$num_from_left,
+                                            possible_matches$num_from_right)
+    values(possible_matches)[,"number_of_segments_to_be_fused"] = number_of_segments_to_be_fused
+
+    contig_size_to_be_fused = ifelse(gv(possible_matches, junc_contig_face_field) == "left",
+                                     possible_matches$cumdist_from_left,
+                                     possible_matches$cumdist_from_right)
+    possible_matches$contig_size_to_be_fused = contig_size_to_be_fused
+
+    num_rearrangements_to_be_fused = ifelse(gv(possible_matches, junc_contig_face_field) == "left",
+                                     possible_matches$num_rearrangements_from_left,
+                                     possible_matches$num_rearrangements_from_right)
+    possible_matches$num_rearrangements_to_be_fused = num_rearrangements_to_be_fused
+
+    num_rearrangements_on_unfused = ifelse(gv(possible_matches, junc_contig_face_field) == "left",
+                                     possible_matches$num_rearrangements_from_right,
+                                     possible_matches$num_rearrangements_from_left)
+    possible_matches$num_rearrangements_on_unfused = num_rearrangements_on_unfused
+    return(possible_matches)
+}
+
+
+
+
+
+loose_end_match = function(sim_object, tile) {
+    set.seed(1)
+    init_contigs = sim_object[[1]]$input_contigs
+    final_contigs = grab_all_contigs(sim_object, length(sim_object))
+    contigs_dt = contigs2dt(final_contigs$contigs_lst, tile)
+
+    ## adding in the segment-level information
+    setnames(contigs_dt, "unlisted", "seg_id")
+
+    contigs_dt[, cumdist_from_left := cumsum(width), by = .ix]
+    contigs_dt[, cumdist_from_right := rev(cumsum(rev(width))), by = .ix]
+    contigs_dt[, contig_width := sum(width), by = .ix]
+
+    contigs_dt[, num_segs := .N, by = .ix]
+    contigs_dt[, num_from_left := 1:.N, by = .ix]
+    contigs_dt[, num_from_right := rev(1:.N), by = .ix]
+
+    contigs_dt[, num_rearrangements := length(which(diff(seg_id) != 1)), by = .ix]
+    contigs_dt[, num_rearrangements_from_left := cumsum(c(0, ifelse(diff(seg_id) == 1, 0, 1))), by = .ix]
+    contigs_dt[, num_rearrangements_from_right := rev(cumsum(c(0, ifelse(diff(rev(seg_id)) == -1, 0, 1)))), by = .ix]
+
+    first_reference_face = setNames(unlapply(final_contigs$contigs_lst, function(x) {
+        ifelse(sign(x[1]) == 1, "left", "right")
+    }), NULL)
+
+    last_reference_face = setNames(unlapply(final_contigs$contigs_lst, function(x) {
+        ifelse(sign(x[length(x)]) == 1, "right", "left")
+    }), NULL)
+
+    final_contigs[, first_reference_face := first_reference_face]
+    final_contigs[, last_reference_face := last_reference_face]
+
+
+    first = contigs_dt[, .SD[1], by = .ix][, loose := final_contigs$loose_left]
+    last  = contigs_dt[, .SD[nrow(.SD)], by = .ix][, loose := final_contigs$loose_right]
+
+    ## subsetting
+
+    ## first = first[num_rearrangements > 0] ## only rearranged contigs
+    ## last = last[num_rearrangements > 0]
+
+    first = first[num_segs > 1] ## remove singleton segments
+    last = last[num_segs > 1]
+
+    ## setnames(first, "unlisted", "seg_id")
+    ## setnames(last, "unlisted", "seg_id")
+
+    first[, reference_face := ifelse(sign(seg_id) == 1, "left", "right")]
+    last[, reference_face := ifelse(sign(seg_id) == 1, "right", "left")]
+
+    all = rbind(first, last)
+
+    left_facing = all[reference_face == "left" & loose,]
+    right_facing = all[reference_face == "right" & loose,]
+
+    gr_left = gr.start(dt2gr(left_facing))
+    gr_right = gr.end(dt2gr(right_facing))
+
+    full_genome = si2gr(gr_left)
+
+    ## starts = gr.start(full_genome)
+    ## ends = gr.end(full_genome)
+
+    ## gr_left = sort(sortSeqlevels(grbind(gr_left, ends)), ignore.strand = TRUE)
+    ## gr_right = sort(sortSeqlevels(grbind(gr_right, starts)), ignore.strand = TRUE)
+
+    gr_left = sort(sortSeqlevels(gr_left), ignore.strand = TRUE)
+    gr_right = sort(sortSeqlevels(gr_right), ignore.strand = TRUE)
+
+    left_lst = split(gr_left, seqnames(gr_left))
+
+    right_lst = split(gr_right, seqnames(gr_right))
+
+    tmp_tel_1 = unique(unlist(lapply(init_contigs$contigs_lst, function(x) head(x,1)), use.names = F))
+    tmp_tel_2 = unique(unlist(lapply(init_contigs$contigs_lst, function(x) tail(x,1)), use.names = F))
+    first_tel = c(tmp_tel_1, -tmp_tel_2)
+    last_tel = c(-tmp_tel_1, tmp_tel_2)
+
+
+
+
+    matches = Map(function(lefts, rights, seqs) {
+        
+        left_bp = start(lefts)
+        right_bp = start(rights)
+
+        distances = outer(left_bp, right_bp, "-")
+
+        match_mat = do.call('rbind', match_loose_ends(distances))
+
+        if (is.null(match_mat)) {
+            return(NULL)
+        }
+        
+        left_ix = lefts[match_mat[,1]]$.ix
+        left_iix = lefts[match_mat[,1]]$.iix
+        left_seg_id = lefts[match_mat[,1]]$seg_id
+        left_allele = sub("\\_[0-9].*", "", lefts[match_mat[, 1]]$nm)
+        right_ix = rights[match_mat[,2]]$.ix
+        right_iix = rights[match_mat[,2]]$.iix
+        right_seg_id = rights[match_mat[,2]]$seg_id
+        right_nm = rights[match_mat[, 2]]$nm
+        right_allele = sub("\\_[0-9].*", "", rights[match_mat[, 2]]$nm)
+        
+        ## ix_match_mat =  matrix(c(left_ix, right_ix), ncol = 2)
+        ## dimnames(ix_match_mat) = list(NULL, c("left_facing_ix", "right_facing_ix"))
+        ## return(ix_match_mat)
+        dt = data.table(left_facing_ix = left_ix, left_facing_iix = left_iix, left_seg_id = left_seg_id, left_allele = left_allele, right_facing_ix = right_ix, right_facing_iix = right_iix, right_seg_id = right_seg_id, right_allele = right_allele, seqnames = seqs)
+
+        return(dt)
+    }, left_lst, right_lst, seqlevels(left_lst))
+
+    dt_matches = rbindlist(matches)
+    if (nrow(dt_matches) > 0) {
+        dt_matches[, left_iix_position := ifelse(left_facing_iix > 1, "last", "first")]
+        dt_matches[, right_iix_position := ifelse(right_facing_iix > 1, "last", "first")]
+        dt_matches[, abs_index := 1:.N]
+    }
+    
+
+    if (nrow(dt_matches) > 0) tmp_row_index = 1:nrow(dt_matches) else tmp_row_index = integer(0)
+
+    list_of_loose_end_chains = list()
+
+    
+    while (length(tmp_row_index) > 0) {
+        c_idx = tmp_row_index[1]
+        c_left_ix = dt_matches[c_idx]$left_facing_ix
+        c_right_ix = dt_matches[c_idx]$right_facing_ix
+        c_left_iix_position = dt_matches[c_idx]$left_iix_position
+        c_right_iix_position = dt_matches[c_idx]$right_iix_position
+        current_chain = c(c_right_ix, c_left_ix)
+        names(current_chain) = c(c_right_iix_position, c_left_iix_position)
+        extend_chain = TRUE
+        while (extend_chain) {
+            init = current_chain[1]
+            final = current_chain[length(current_chain)]
+            
+            other_inits_1 = dt_matches[tmp_row_index[-1]][left_facing_ix %in% init, abs_index]
+            begin_add_on_chain_1 = c(dt_matches[other_inits_1, right_facing_ix], dt_matches[other_inits_1, left_facing_ix])
+            names(begin_add_on_chain_1) = c(dt_matches[other_inits_1, right_iix_position], dt_matches[other_inits_1, left_iix_position])
+            if (length(other_inits_1) > 0) tmp_row_index = tmp_row_index[-which(tmp_row_index == other_inits_1)]
+            current_chain = c(begin_add_on_chain_1, current_chain)
+            
+            other_inits_2 = dt_matches[tmp_row_index[-1]][right_facing_ix %in% init, abs_index]
+            begin_add_on_chain_2 = c(dt_matches[other_inits_2, right_facing_ix], dt_matches[other_inits_2, left_facing_ix])
+            names(begin_add_on_chain_2) = c(dt_matches[other_inits_2, right_iix_position], dt_matches[other_inits_2, left_iix_position])
+            if (length(other_inits_2) > 0) tmp_row_index = tmp_row_index[-which(tmp_row_index == other_inits_2)]
+            current_chain = c(rev(begin_add_on_chain_2), current_chain)
+            
+            other_finals_1 = dt_matches[tmp_row_index[-1]][left_facing_ix %in% final, abs_index]
+            end_add_on_chain_1 = c(dt_matches[other_finals_1, right_facing_ix], dt_matches[other_finals_1, left_facing_ix])
+            names(end_add_on_chain_1) = c(dt_matches[other_finals_1, right_iix_position], dt_matches[other_finals_1, left_iix_position])
+            if (length(other_finals_1) > 0) tmp_row_index = tmp_row_index[-which(tmp_row_index == other_finals_1)]
+            current_chain = c(current_chain, rev(end_add_on_chain_1))
+            
+            other_finals_2 = dt_matches[tmp_row_index[-1]][right_facing_ix %in% final, abs_index]
+            end_add_on_chain_2 = c(dt_matches[other_finals_2, right_facing_ix], dt_matches[other_finals_2, left_facing_ix])
+            names(end_add_on_chain_2) = c(dt_matches[other_finals_2, right_iix_position], dt_matches[other_finals_2, left_iix_position])
+            if (length(other_finals_2) > 0) tmp_row_index = tmp_row_index[-which(tmp_row_index == other_finals_2)] 
+            current_chain = c(current_chain, end_add_on_chain_2)
+            
+
+            extend_chain = current_chain[1] != init | current_chain[length(current_chain)] != final
+            
+        }
+
+        correct_order = rep(c("last", "first"), length(current_chain)/2)
+        flip = names(current_chain) != correct_order
+        current_chain[flip] = current_chain[flip]* -1
+        names(current_chain) = correct_order
+        
+        list_of_loose_end_chains = c(list_of_loose_end_chains, list(current_chain))
+        
+
+        if (length(c(other_inits_1, other_inits_2, other_finals_1, other_finals_2)) == 0) {
+            tmp_row_index = tmp_row_index[-1]
+        }
+    }
+    
+        ## dt_matches[-c_idx][init %in% 
+        ## dt_matches[-c_idx]
+        
+        ## left_match_1 = which(other_lefts == c_left_ix)
+        ## left_match_2 = which(other_rights == c_left_ix)
+        ## right_match_1 = which(other_lefts == c_right_ix)
+        ## right_match_2 = which(other_rights == c_right_ix)
+
+    new_fusions = lapply(list_of_loose_end_chains, function(dt_ix) {
+        tmp_ix = unique(abs(dt_ix))
+        these_ids = split(dt_ix, rep(1:(length(dt_ix)/2), each = 2))
+        fill_ins = setNames(lapply(these_ids, function(x) {
+            first_of_pair = final_contigs[abs(x[1])]$contigs_lst[[1]]
+            if (x[1] < 0) first_of_pair = rev(-first_of_pair)
+            second_of_pair = final_contigs[abs(x[2])]$contigs_lst[[1]]
+            if (x[2] < 0) second_of_pair = rev(-second_of_pair)
+            last = first_of_pair[length(first_of_pair)]
+            first = second_of_pair[1]
+            last_allele = sub("_[0-9].*", "", names(last))
+            first_allele = sub("_[0-9].*", "", names(first))
+            if (last_allele != first_allele) allele = sample(c(last_allele, first_allele), 1) else allele = last_allele
+            this_fill_in = seq(last + 1, first -1)
+            names(this_fill_in) = paste0(allele, "_", abs(this_fill_in))
+            return(this_fill_in)
+        }), NULL)
+        fused_segments = lapply(unique(dt_ix), function(x) {
+            tmp_segs = final_contigs[abs(x)]$contigs_lst[[1]]
+            if (x < 0) tmp_segs = rev(-tmp_segs)
+            return(tmp_segs)
+        })
+        new_fusions = intercalate_lst(fused_segments, fill_ins)
+        
+        return(unlist(new_fusions))
+    })
+    
+    ## fill_in_segs = Map(function(right_facing, left_facing, r_allele, l_allele) {
+    ##     tmp = seq(abs(right_facing) + 1, abs(left_facing) - 1)
+    ##     if (r_allele != l_allele) {
+    ##         allele = sample(c(r_allele, l_allele), 1)
+    ##     } else {
+    ##         allele = r_allele
+    ##     }
+
+    ##     names(tmp) = paste0(allele, "_", tmp)
+
+    ##     return(tmp)
+        
+    ## }, dt_matches$right_seg_id, dt_matches$left_seg_id, dt_matches$right_allele, dt_matches$left_allele)
+
+    ## new_fusions = lapply(1:nrow(dt_matches), function(i) {
+    ##     left_facing_ix = dt_matches[i]$left_facing_ix
+    ##     left_facing_iix = dt_matches[i]$left_facing_iix
+    ##     left_position = ifelse(left_facing_iix > 1, "last", "first")
+    ##     left_seg_id = dt_matches[i]$left_seg_id
+    ##     right_facing_ix = dt_matches[i]$right_facing_ix
+    ##     right_facing_iix = dt_matches[i]$right_facing_iix
+    ##     right_position = ifelse(right_facing_iix > 1, "last", "first")
+    ##     right_seg_id = dt_matches[i]$right_seg_id
+
+    ##     left_facing_loose_contig = final_contigs[left_facing_ix]$contigs_lst[[1]]
+    ##     right_facing_loose_contig = final_contigs[right_facing_ix]$contigs_lst[[1]]
+
+    ##     if (right_position == "first") {
+    ##         left_facing_loose_contig = rev(-left_facing_loose_contig)
+    ##     }
+
+    ##     if (left_position == "last") {
+    ##         right_facing_loose_contig = rev(-right_facing_loose_contig)
+    ##     }
+
+    ##     fused_contig = c(left_facing_loose_contig, fill_in_segs[[i]], right_facing_loose_contig)
+
+    ##     return(fused_contig)
+    ## })
+
+    ## take out the final contigs information and then 
+
+    fused_contigs_tbl = rbindlist(lapply(new_fusions, function(segs) {
+
+        loose_left = ! segs[1] %in% first_tel
+        loose_right = ! segs[length(segs)] %in% last_tel
+        
+        return(data.table(contigs_lst = list(segs),
+                   contig_nm = list(seqlevelsInUse(tile[match(as.character(segs), names(tile))])),
+                   contig_idx = NA,
+                   iter_idx = NA,
+                   loose_left = loose_left,
+                   loose_right = loose_right,
+                   first_reference_face = ifelse(sign(segs[1]) == 1, "left", "right"),
+                   last_reference_face = ifelse(sign(segs[length(segs)]) == 1, "right", "left")))
+    }))
+
+    ix_to_remove = c(dt_matches$right_facing_ix, dt_matches$left_facing_ix)
+    ix_to_remove = unique(ix_to_remove)
+    
+    if (!is.null(ix_to_remove)) {
+        new_final_contigs = rbind(fused_contigs_tbl, final_contigs[-ix_to_remove])
+    } else {
+        new_final_contigs = final_contigs
+    }
+    
+    return(new_final_contigs)
+
+    
+}
+
+
+match_loose_ends = function(d_mat, verbose = FALSE) {
+    if (length(as.vector(d_mat)) == 0) {
+        return(list(NULL))
+    }
+    
+    dimensions = dim(d_mat)
+    transposed = FALSE
+
+    if (dimensions[1] < dimensions[2]) {
+        d_mat = t(d_mat)
+        transposed = TRUE
+    }
+    set.seed(1)
+    V = sample(1:ncol(d_mat), ncol(d_mat))
+
+
+    match_lst = list()
+    counter = 1
+    while(length(V) > 0) {
+        if (verbose) { message("iteration step ", counter) }
+        ## browser(expr = (counter == 6))
+    ## for (idx in 1:ncol(d_mat)) {
+        i = sample(V, 1)
+        init_dists = d_mat[,i]
+        idx1 = which(init_dists > 0 & init_dists < Inf)
+        idx2 = which.min(init_dists[idx1])
+        row_match = idx1[idx2]
+        if (length(row_match) > 0) {
+            ## check row
+            row_dists = d_mat[row_match,]
+            idx1 = which(row_dists > 0 & row_dists < Inf)
+            idx2 = which.min(row_dists[idx1])
+            smallest_dist_col_idx = idx1[idx2]
+            smaller_dist_in_row = any(row_dists[smallest_dist_col_idx] < init_dists[row_match])
+            if (smaller_dist_in_row) {
+                new_col_dists = d_mat[,smallest_dist_col_idx]
+                idx1 = which(new_col_dists > 0 & new_col_dists < Inf)
+                idx2 = which.min(new_col_dists[idx1])
+                smallest_dist_new_row_idx = idx1[idx2]
+                smaller_dist_in_new_col = any(new_col_dists[smallest_dist_new_row_idx] < row_dists[smallest_dist_col_idx])
+                if (smaller_dist_in_new_col) {
+                    if (transposed) {
+                        match_lst = c(match_lst, list(c(i, row_match)))
+                    } else {
+                        match_lst = c(match_lst, list(c(row_match, i)))
+                    }
+                    V = V[!V==i]
+                    d_mat[row_match,] = Inf
+                    d_mat[,i] = Inf
+                } else {
+                    if (transposed) {
+                        match_lst = c(match_lst, list(c(smallest_dist_col_idx, row_match)))
+                    } else {
+                        match_lst = c(match_lst, list(c(row_match, smallest_dist_col_idx)))
+                    }
+                    V = V[!V==smallest_dist_col_idx]
+                    d_mat[row_match,] = Inf
+                    d_mat[,smallest_dist_col_idx] = Inf
+                }
+            } else {
+                if (transposed) {
+                    match_lst = c(match_lst, list(c(i, row_match)))
+                } else {
+                    match_lst = c(match_lst, list(c(row_match, i)))
+                }
+                V = V[!V==i]
+                d_mat[row_match,] = Inf
+                d_mat[,i] = Inf
+            }
+        } else {
+            V = V[!V==i]
+        }
+        counter = counter +1
+    }
+    return(match_lst)
+}
+
+
+
+
+gr_keep_seq = function(gr, seqlev) {
+    tmp = gr[as.character(seqnames(gr)) %in% seqlev]
+    si = as.data.frame(seqinfo(tmp))[seqlev,]
+    si[, "seqnames"] = seqlev
+    new_si = as(si[seqlev,], "Seqinfo")
+    ir = ranges(tmp)
+    seq = seqnames(tmp)
+    nm = names(tmp)
+    st = strand(tmp)
+    gr_val = values(tmp)
+    new_gr = GRanges(seq, ir, st, seqinfo = new_si)
+    values(new_gr) = gr_val
+    return(new_gr)
+}
+
+gr_seqlevels = function(gr, seqlev, keep = TRUE, drop = !keep) {
+    
+    tmp = gr[seqnames(gr) %in% seqlev]
+    si = as.data.frame(seqinfo(tmp))
+    new_si = as(si[seqlev,], "Seqinfo")
+    ir = ranges(tmp)
+    seq = seqnames(tmp)
+    nm = names(tmp)
+    st = strand(tmp)
+    gr_val = values(tmp)
+    new_gr = GRanges(seq, ir, st, seqinfo = new_si)
+    values(new_gr) = gr_val
+    return(gr_val)
+}
+
+
+map_junc2seg = function(query, subject) {
+    ## query is junction
+    ## subject is tiled
+    if (inherits(query, "GRangesList")) {
+        is_grl = TRUE
+        query = grl.unlist(query)
+    } else {
+        is_grl = FALSE
+    }
+    w = width(query)
+
+    if (any(w>1)) {
+        query = gr.start(query, width = 1)
+    }
+    
+    
+    query[strand(query) == "+"] = shift((query[strand(query) == "+"] ), 1)
+
+    tmp=as.data.table(as.data.frame(GenomicRanges::findOverlaps(query, subject, maxgap = 0, minoverlap = 1, type = "within", ignore.strand = T)))
+    return(tmp)
+    
 }
