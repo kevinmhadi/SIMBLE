@@ -969,8 +969,11 @@ setAllNames = function(v, nm) {
 
 
 plot_all_contigs = function(iteration_list, directory = NULL, windows = NULL, mc.cores = 1, id_contigs = FALSE, format = "pdf") {
-    grabbed_junctions = Reduce(c, (lapply(iteration_list, "[[", 10)))
-    tile = sorted_tile(grabbed_junctions)
+    tile = attributes(iteration_list)$tile
+    if (is.null(tile)) {
+        grabbed_junctions = Reduce(c, (lapply(iteration_list, "[[", 10)))
+        tile = sorted_tile(grabbed_junctions)
+    }
     if (! is.null(directory)) {
         directory = paste0(directory, "/")
         system(paste('mkdir -p', directory))
